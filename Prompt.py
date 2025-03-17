@@ -26,3 +26,9 @@ advice_prompt = PromptTemplate(
 帮助学生理解正确答案中的关键点。
     """
 )
+
+# 在 Prompt.py 中添加
+summary_prompt = PromptTemplate.from_template(
+    "以下是一系列问题的错误回答、正确回答和分析建议：\n\n{mistakes_summary}\n\n"
+    "请对这些错题进行总结，分析学生普遍存在的问题，并给出整体的改进建议。"
+)
