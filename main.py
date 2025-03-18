@@ -18,8 +18,8 @@ summary_chain = summary_prompt | zhipu_llm
 
 # 组合链
 def format_input(inputs):
-    analysis_output = inputs["analysis_output"]
-    return {"analysis": analysis_output, "correct_answer": inputs["correct_answer"]}
+
+    return {"analysis": inputs["analysis_output"], "correct_answer": inputs["correct_answer"]}
 
 react_chain = {
     "question": lambda x: x["question"],
