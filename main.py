@@ -1,70 +1,84 @@
-
-import json
-from langchain.schema.runnable import RunnableSequence, RunnableLambda
-from ZHIPU import ChatGLM
-from Prompt import analysis_prompt, advice_prompt, summary_prompt
-from tqdm import tqdm
-
-zhipu_llm = ChatGLM()
+import autogen
+import yaml
+import sys
 
 
-# 处理链
-analysis_chain = analysis_prompt | zhipu_llm
-advice_chain = advice_prompt | zhipu_llm
-summary_chain = summary_prompt | zhipu_llm
+class Logger(object):
+    def __init__(self, filename="autogen.log"):
+        self.terminal = sys.stdout
+        self.log = open(filename, "w")
+
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
+
+    def flush(self):
+        # this flush method is needed for python 3 compatibility.
+        # this handles the flush command by doing nothing.
+        # you might want to specify some extra behavior here.
+        pass
+
+sys.stdout = Logger()
 
 
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
 
 
-# 组合链
-def format_input(inputs):
-    analysis_output = inputs["analysis_output"]
-    return {"analysis": analysis_output, "correct_answer": inputs["correct_answer"]}
+zhipu_config = config["client"]["zhipu"]
+# config_list_gpt = [client_config]
 
-react_chain = {
-    "question": lambda x: x["question"],
-    "wrong_answer": lambda x: x["wrong_answer"],
-    "correct_answer": lambda x: x["correct_answer"],
-    "analysis_output": analysis_chain
-} | RunnableLambda(format_input) | advice_chain
+config_list_gpt = [{**zhipu_config}]
 
-# 处理多个问题的函数
-def process_multiple_questions(questions):
-    results = []
-    for question in tqdm(questions):
-        result = react_chain.invoke(question)
-        results.append({
-            "question": question["question"],
-            "wrong_answer": question["wrong_answer"],
-            "correct_answer": question["correct_answer"],
-            "advice": result
-        })
-    return results
+# User Proxy Agent
+user_proxy = autogen.UserProxyAgent(
+    name="User_Proxy",
+    system_message="你是一个用户代理，负责接收用户的需求并协调整个流程。你需要清晰地理解用户的需求，并将任务分配给合适的 Agent。",
+    code_execution_config={"last_n_messages": 2, "work_dir": "coding"},
+    human_input_mode="ALWAYS",  # 允许用户在每个步骤进行干预
+)
 
-# 生成错题总结的函数
-def generate_summary(results):
-    summary_input = "\n".join([
-        f"问题：{r['question']}\n"
-        f"错误回答：{r['wrong_answer']}\n"
-        f"正确回答：{r['correct_answer']}\n"
-        f"分析建议：{r['advice']}\n"
-        for r in results
-    ])
-    return summary_chain.invoke({"mistakes_summary": summary_input})
+# Market Analyst Agent
+market_analyst = autogen.AssistantAgent(
+    name="Market_Analyst",
+    llm_config={"config_list": config_list_gpt, "seed": 42},
+    system_message="你是一位资深的市场分析师。你的任务是根据用户需求进行市场调研，分析目标用户、竞争对手和市场趋势。你需要使用搜索引擎等工具来获取信息，并总结市场机会和潜在风险。",
+)
+
+# Product Manager Agent
+product_manager = autogen.AssistantAgent(
+    name="Product_Manager",
+    llm_config={"config_list": config_list_gpt, "seed": 42},
+    system_message="你是一位经验丰富的产品经理。你的任务是根据市场分析结果，生成具体的产品概念和初步的产品规格。你需要考虑用户痛点、市场机会和技术可行性。",
+)
+
+# Technical Lead Agent
+technical_lead = autogen.AssistantAgent(
+    name="Technical_Lead",
+    llm_config={"config_list": config_list_gpt, "seed": 42},
+    system_message="你是一位资深的技术主管。你的任务是评估产品概念的技术可行性，识别关键技术和潜在的技术风险。你需要考虑现有技术、开发成本和时间等因素。",
+)
+
+# Report Writer Agent
+report_writer = autogen.AssistantAgent(
+    name="Report_Writer",
+    llm_config={"config_list": config_list_gpt, "seed": 42},
+    system_message="你是一位专业的报告撰写员。你的任务是整合市场分析师、产品经理和技术主管的输出，生成一份包含市场分析、产品概念和技术可行性评估的初步报告。",
+)
+
+groupchat = autogen.GroupChat(
+    agents=[user_proxy, market_analyst, product_manager, technical_lead, report_writer],
+    messages=[],
+    max_round=20,  # 设置最大对话轮数
+)
+manager = autogen.GroupChatManager(llm_config={"config_list": config_list_gpt, "seed": 42}, groupchat=groupchat)
+
+user_proxy.initiate_chat(
+    manager,
+    message="我想开发一款能够提升用户生活品质的智能家居产品。请进行市场调研，生成产品概念，并评估其初步的技术可行性，最终生成一份报告。",
+)
 
 
-
-
-# 示例使用
-if __name__ == "__main__":
-    with open("data/bio.json", 'r', encoding='utf-8') as file:
-        data = file.read()
-    # Parse the JSON data
-    data = json.loads(data)
-    results = process_multiple_questions(data)
-    save_path = "result.txt"
-    # 保存结果到文件
-    with open(save_path, 'w', encoding='utf-8') as f:
-        f.write(generate_summary(results))
-
-    # print("【改进建议】\n", result)  # 第二个输出是建议/
+# 在程序结束时关闭 log 文件
+sys.stdout.log.close()
+sys.stdout = sys.stdout.terminal # 恢复默认输出
