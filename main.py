@@ -1,32 +1,40 @@
 import autogen
 import yaml
 import sys
+from logger import Logger
+from Agents import *
+from autogen import AssistantAgent
 
 
-class Logger(object):
-    def __init__(self, filename="autogen.log"):
-        self.terminal = sys.stdout
-        self.log = open(filename, "w")
+if __name__ == "__main__":
 
-    def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
+    sys.stdout = Logger()   
+    config = load_yaml("config.yaml")
+    config_list_zhipu = load_ZhiPu(config)
+    config_list_gemini = load_Gemini(config)
 
-    def flush(self):
-        # this flush method is needed for python 3 compatibility.
-        # this handles the flush command by doing nothing.
-        # you might want to specify some extra behavior here.
-        pass
+    analysis_agent = AssistantAgent(
+        name="analysis_agent",
+        system_message="你是一个专业的错题分析老师，你需要仔细阅读学生错题，理解学生的错误原因，并给出改进建议。你需要使用中文进行交流。",
+        llm_config={"config_list": config_list_zhipu, "seed": 42},
+    )
 
-sys.stdout = Logger()
+    summary_agent = AssistantAgent(
+        name="summary_agent",
+        system_message="你是一个专业的分析学生错题的总结者，你需要将学生的错题进行总结，并给出总结报告。你需要使用中文进行交流。",
+        llm_config={"config_list": config_list_zhipu, "seed": 42},
+    )
 
 
-with open("config.yaml", "r") as f:
-    config = yaml.safe_load(f)
+
+    
+
+    pass
+
+
 
 
 zhipu_config = config["client"]["zhipu"]
-# config_list_gpt = [client_config]
 
 config_list_gpt = [{**zhipu_config}]
 
