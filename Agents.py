@@ -20,6 +20,11 @@ def load_Gemini(config: dict) -> list:
     config_list_gpt = [{**zhipu_config}]
     return config_list_gpt
 
+def load_deepseeker(config: dict) -> list:
+    deepseek = config["client"]["deepseek"]
+    config_list_gpt = [{**deepseek}]
+    return config_list_gpt
+
 
 def Create_Agents(config_list_gpt: list, name: str, prompt: str, seed=None):
     pass

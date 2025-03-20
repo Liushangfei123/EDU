@@ -1,6 +1,6 @@
 client:
   gemini:
-    "model": "gemini-2.0-flash-lite" # 或者你希望使用的 Gemini 模型
+    "model": "gemini-2.0-flash" # 或者你希望使用的 Gemini 模型
     "api_key": "AIzaSyDgUBmKHna9XSOo4DDMJSXkTFxJLfvxiIw" # 替换为你的 Vertex AI API 密钥
     "api_type": "google"
     "base_url": "https://asia-east1-aiplatform.googleapis.com" # 替换为你的 Vertex AI 区域端点
@@ -9,3 +9,8 @@ client:
     "api_key": "398f5e33f62c6a9dc7cd95987b14aae6.rKQve5A1VUNNHW4Z"
     "base_url": "https://open.bigmodel.cn/api/paas/v4"
     "price": [0.002, 0.004]
+  deepseek:
+    "model": "deepseek-r1:1.5b"
+    # "client_host": "http://localhost:8434/api/generate"
+    # "api_type": "ollama"
+    "base_url": "http://localhost:8434"
