@@ -2,11 +2,11 @@ import autogen
 import yaml
 import sys
 from logger import Logger
-from Agents import *
+from utils import *
 from autogen import AssistantAgent
 import json
 from tqdm import tqdm
-
+from RAG.rag_utils import create_collection, upload_txt_file, rag_search
 
 def load_data(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -19,45 +19,23 @@ if __name__ == "__main__":
     sys.stdout = Logger()   
     config = load_yaml("config.yaml")
     config_list_zhipu = load_ZhiPu(config)
-    config_list_gemini = load_Gemini(config)
-    config_list_deepseeker = load_deepseeker(config)
     data = load_data("data/bio.json")
 
     analysis_agent = AssistantAgent(
         name="analysis_agent",
-        system_message="你是一个专业的错题分析老师，你需要仔细阅读学生错题，理解学生的错误原因，并给出改进建议。你需要使用中文进行交流。",
+        system_message="你是一个专业的生物老师，你需要仔细阅读学生错题，理解学生的错误原因。分析学生是以下几点中，哪几点比较薄弱。知识点：**细胞** 涵盖细胞的基本结构、植物细胞和动物细胞的区别、细胞的生命活动等。**生态系统与环境** 包括生态系统组成、生物与环境关系、生态平衡和生物多样性。**人体生理系统** 研究人体各个系统，如消化系统、呼吸系统、循环系统、神经系统等。**遗传与进化** 介绍基本遗传规律、基因概念、遗传变异和生物进化理论。植物生理 探讨光合作用、植物生长发育、器官结构和对环境的响应。你的回答结果如下：薄弱点：{**具体薄弱点**}，你的输出不能有任何解释。",
         llm_config={"config_list": config_list_zhipu, "seed": 42},
         max_consecutive_auto_reply=2
     )
 
-    summary_agent = AssistantAgent(
-        name="summary_agent",
-        system_message="你是一个专业的分析学生错题的总结者，你需要将学生的错题进行总结，并给出总结报告。你需要使用中文进行交流。",
-        llm_config={"config_list": config_list_gemini, "seed": 42},
+    reinforce_agent = AssistantAgent(
+        name="reinforce_agent",
+        system_message="你是一个专业的分析学生错题的强化者，你需要将学生的错题进行强化，帮助学生理解错题。你需要使用中文进行交流。",
+        llm_config={"config_list": config_list_zhipu, "seed": 42},
+        function_map={"rag_search": rag_search},
         max_consecutive_auto_reply=1
     )
-    analysis_results = []
-    for question in tqdm(data):
-        # 分析错题
-        analysis_agent.initiate_chat(
-            recipient=analysis_agent,
-            message=question["question"],
-        )
-        analysis_result = analysis_agent.last_message()["content"]
-        analysis_results.append(analysis_result)
-    summary_message = "\n".join(analysis_results)
 
-    # 薄弱点总结
-    summary_agent.initiate_chat(
-        recipient=summary_agent,
-        message="请你根据错题分析老师的分析总结学生的薄弱点，总结该生接下来要学习哪些知识点。分析的结果如下：\n" + summary_message,
-        max_consecutive_auto_reply=4
-    )
-    with open("data/summary.md", "w", encoding="utf-8") as f:
-        f.write(summary_agent.last_message()["content"])
-
-    # 输出总结报告
-    print(summary_agent.last_message()["content"])
 
 
     # 在程序结束时关闭 log 文件
