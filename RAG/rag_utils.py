@@ -4,15 +4,11 @@ import uuid
 import json
 import time
 from zhipuai import ZhipuAI
+from typing import List, Dict, Any
 
-# 远程Qdrant连接配置
-QDRANT_URL = "https://1125ff6b-5368-4bf2-baf1-2b1e36fbc8fd.us-west-2-0.aws.cloud.qdrant.io:6333"
-QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwiZXhwIjoxNzQ3MTA3MTIyfQ.dR4GBwXt0oPsXuFzCsSEYXf4A7PCDtofuEDXpwJ6_p8"
-# 智谱AI API配置
-ZHPIU_API_KEY = "398f5e33f62c6a9dc7cd95987b14aae6.rKQve5A1VUNNHW4Z"
+from keys import *
 
-
-def create_collection(collection_name,dimension=1024):
+def create_collection(collection_name:str,dimension:int =1024):
     client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
     try:
         client.create_collection(
@@ -37,7 +33,7 @@ def create_collection(collection_name,dimension=1024):
         print(f"创建了新集合 '{COLLECTION_NAME}'")
 
 
-def generate_embeddings(texts):
+def generate_embeddings(texts:str)-> List[float]:
     client_zhipu = ZhipuAI(api_key=ZHPIU_API_KEY)
     try:
         response = client_zhipu.embeddings.create(
@@ -50,17 +46,10 @@ def generate_embeddings(texts):
         print(f"生成嵌入向量失败: {e}")
         return None
 
-def upload_txt_file(file_path, COLLECTION_NAME, chunk_size=500, chunk_overlap=200):
+def upload_txt_file(text, COLLECTION_NAME, chunk_size=100, chunk_overlap=50):
 
     client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            text = file.read()
-    except UnicodeDecodeError:
-        with open(file_path, 'r', encoding='latin-1') as file:
-            text = file.read()
 
-    print(f"成功读取文件: {file_path}")
     print(f"文本总长度: {len(text)} 字符")
 
     # 分割文本为块
@@ -94,10 +83,39 @@ def upload_txt_file(file_path, COLLECTION_NAME, chunk_size=500, chunk_overlap=20
 
     print(f"成功上传文件 '{file_path}' 到Qdrant，共 {len(points)} 个文本块")
 
+def rag_search(collection_name, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+    client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+    query_vector = generate_embeddings(query)[0]
+    try:
+        response = client.search(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=top_k,
+            with_payload=True
+        )
+        results = []
+        for result in response:
+            results.append({
+                "text": result.payload.get('text', ''),
+                "similarity": result.score,
+                "doc_id": result.payload.get("doc_id", ""),})
+
+        return results
+
+    except Exception as e:
+        print(f"检索失败: {e}")
+        return None
+
+
+
 
 if __name__ == '__main__':
 
-    file_path = "/workspace/Projects/EDU/data/romantic_data/story.txt"
-    COLLECTION_NAME = "romantic_story"
+    file_path = "../data/bio/kb.txt"
+    COLLECTION_NAME = "bio_kb"
     create_collection(COLLECTION_NAME, 1024)
-    upload_txt_file(file_path, COLLECTION_NAME)
+    with open(file_path, 'r', encoding='utf-8') as file:
+            text = file.read()
+    upload_txt_file(text, COLLECTION_NAME)
+    query = "什么是达尔文"
+    print(rag_search(collection_name=COLLECTION_NAME, query=query))

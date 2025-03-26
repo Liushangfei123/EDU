@@ -1,0 +1,4 @@
+
+QDRANT_URL = "https://1125ff6b-5368-4bf2-baf1-2b1e36fbc8fd.us-west-2-0.aws.cloud.qdrant.io:6333"
+QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwiZXhwIjoxNzQ3MTA3MTIyfQ.dR4GBwXt0oPsXuFzCsSEYXf4A7PCDtofuEDXpwJ6_p8"
+ZHPIU_API_KEY = "398f5e33f62c6a9dc7cd95987b14aae6.rKQve5A1VUNNHW4Z"
