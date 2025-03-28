@@ -4,7 +4,7 @@ function_map = {
     "rag_search": rag_search
 }
 
-{
+rag_search_config={
     "name": "rag_search",
     "description": "Search for bio knowledge from knowledge base",
     "parameters": {

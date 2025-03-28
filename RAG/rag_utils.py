@@ -6,7 +6,9 @@ import time
 from zhipuai import ZhipuAI
 from typing import List, Dict, Any
 
-from keys import *
+QDRANT_URL = "https://1125ff6b-5368-4bf2-baf1-2b1e36fbc8fd.us-west-2-0.aws.cloud.qdrant.io:6333"
+QDRANT_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwiZXhwIjoxNzQ3MTA3MTIyfQ.dR4GBwXt0oPsXuFzCsSEYXf4A7PCDtofuEDXpwJ6_p8"
+ZHPIU_API_KEY = "398f5e33f62c6a9dc7cd95987b14aae6.rKQve5A1VUNNHW4Z"
 
 def create_collection(collection_name:str,dimension:int =1024):
     client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
@@ -83,7 +85,7 @@ def upload_txt_file(text, COLLECTION_NAME, chunk_size=100, chunk_overlap=50):
 
     print(f"成功上传文件 '{file_path}' 到Qdrant，共 {len(points)} 个文本块")
 
-def rag_search(collection_name, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+def rag_search(collection_name:str, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
     client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
     query_vector = generate_embeddings(query)[0]
     try:
